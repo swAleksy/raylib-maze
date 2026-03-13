@@ -63,7 +63,10 @@ void MazeGenerator::init() {
 }
 
 void MazeGenerator::stepDFS() {
-    if (stack.empty()) { done = true; return; }
+    if (stack.empty()) { 
+        done = true; 
+        return; 
+    }
 
     int current = stack.top();
     auto [x, y] = grid.coords(current);
