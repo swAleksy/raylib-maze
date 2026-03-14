@@ -1,10 +1,9 @@
 #include "MazeSolver.h"
-#include <cstdlib>
 #include <limits.h>
 
-MazeSolver::MazeSolver(const Grid& g, SolveMode m) 
+MazeSolver::MazeSolver(const Grid& g, SolveMode m)
     : defaultGrid(g), grid(g), mode(m) {
-        grid.resetCells();
+        init();
     }
 
 void MazeSolver::step() {
@@ -18,20 +17,23 @@ void MazeSolver::complete() {
     while (!finished()) step();
 }
 
-void restart(SolveMode newMode){ //todo
-
+void MazeSolver::restart(SolveMode newMode){
+    mode = newMode;
+    grid = defaultGrid;
+    done = false;
+    init();
 }
 
-bool MazeSolver::finished() const { 
+bool MazeSolver::finished() const {
     return done;
 }
 
 int MazeSolver::getCurrentCell() const { // todo
-    if (mode == DIJKSTRA) 
-        return 1;
-    else if (mode == AS) 
+    if (mode == DIJKSTRA)
         return pq.top().second;
-    else if (mode == WALLFOLLOWER) 
+    else if (mode == AS)
+        return 1;
+    else if (mode == WALLFOLLOWER)
         return WfCurrentCell;
     return -1;
 }
@@ -40,13 +42,24 @@ SolveMode MazeSolver::getCurrentMode() const{
     return mode;
 }
 
+void MazeSolver::updateGrid(){
+    grid = defaultGrid;
+    init();
+}
+
+const Grid& MazeSolver::getGrid() const {
+    return grid;
+}
+
 void MazeSolver::init() {
+    grid.resetCells();
+
     int startIdx = 0;
     int finisIdx = grid.data.size() - 1;
 
     grid.data[startIdx].start = true;
     grid.data[startIdx].visited = true;
-    
+
     grid.data[finisIdx].finish = true;
 
     if (mode == WALLFOLLOWER) {
@@ -62,7 +75,6 @@ void MazeSolver::init() {
     else if (mode == AS) {
 
     }
- 
 }
 
 std::vector<int> MazeSolver::getNeighbors(int x, int y, bool onlyVisited) {
@@ -80,13 +92,12 @@ std::vector<int> MazeSolver::getNeighbors(int x, int y, bool onlyVisited) {
 }
 
 void MazeSolver::stepAS() { // todo
-
 }
 
-void MazeSolver::stepDijkstra() { 
-    if (pq.empty()) { 
-        done = true; 
-        return; 
+void MazeSolver::stepDijkstra() {
+    if (pq.empty()) {
+        done = true;
+        return;
     }
 
     auto [dist, currIdx] = pq.top();
@@ -106,10 +117,10 @@ void MazeSolver::stepDijkstra() {
 
         if (newDist < distanceMap[nIdx]) {
             distanceMap[nIdx] = newDist;
-            
+
             grid.data[nIdx].parent = &grid.data[currIdx];
-            
-            grid.data[nIdx].visited = true; 
+
+            grid.data[nIdx].visited = true;
             grid.data[nIdx].inFrontier = true; // queue visualisation
             pq.push({newDist, nIdx});
         }
@@ -120,7 +131,7 @@ void MazeSolver::stepWallfollower() {
     if (done) return;
 
     auto [x, y] = grid.coords(WfCurrentCell);
-    
+
     std::vector<int> directionsToCheck;
 
     if (followLeft) { // (facing dir + check dir) % 4
@@ -130,7 +141,7 @@ void MazeSolver::stepWallfollower() {
             (WfFacing + 1) % 4, // right
             (WfFacing + 2) % 4  // back
         };
-    } 
+    }
     else {
         directionsToCheck = {
             (WfFacing + 1) % 4, // 1. right
@@ -141,7 +152,7 @@ void MazeSolver::stepWallfollower() {
     }
     for (int nextDir : directionsToCheck) {
         bool wallExists = true;
-        
+
         if (nextDir == 0) wallExists = grid.data[WfCurrentCell].walls.top;
         else if (nextDir == 1) wallExists = grid.data[WfCurrentCell].walls.right;
         else if (nextDir == 2) wallExists = grid.data[WfCurrentCell].walls.bott;
@@ -150,16 +161,16 @@ void MazeSolver::stepWallfollower() {
         if (!wallExists) {
             int nx = x + dx[nextDir];
             int ny = y + dy[nextDir];
-            
+
             if (grid.inBounds(nx, ny)) {
                 WfCurrentCell = grid.index(nx, ny);
-                WfFacing = nextDir; 
+                WfFacing = nextDir;
                 grid.data[WfCurrentCell].visited = true;
-                
+
                 if (grid.data[WfCurrentCell].finish) {
                     done = true;
                 }
-                return; 
+                return;
             }
         }
     }
@@ -176,7 +187,7 @@ std::vector<int> MazeSolver::GetNeighborsWithWalls(int x, int y, bool onlyVisite
 
         int nIdx = grid.index(nx, ny);
 
-        if (onlyVisited && !grid.data[nIdx].visited) 
+        if (onlyVisited && !grid.data[nIdx].visited)
             continue;
 
         if (!hasWall(baseIdx, i) && !hasWall(nIdx, (i + 2) % 4)) {
@@ -195,4 +206,3 @@ bool MazeSolver::hasWall(const int idx, int dir) {
     }
     return true;
 }
-

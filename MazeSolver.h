@@ -15,12 +15,14 @@ public:
     bool finished() const;
     int getCurrentCell() const;
     SolveMode getCurrentMode() const;
+    void updateGrid();
+    const Grid& getGrid() const;
 
 private:
     const Grid& defaultGrid;
     Grid grid;
     SolveMode mode;
-    
+
     int WfCurrentCell;
     int WfFacing; // direction of alg 0: up, 1: right, 2: down, 3: left; (dx[x], dy[x])
     bool followLeft = false;
@@ -37,8 +39,8 @@ private:
     void stepAS();
     void stepDijkstra();
     void stepWallfollower();
-    std::vector<int> MazeSolver::GetNeighborsWithWalls(int x, int y, bool onlyVisited = false);
-    bool MazeSolver::hasWall(const int idx, int dir);
+    std::vector<int> GetNeighborsWithWalls(int x, int y, bool onlyVisited = false);
+    bool hasWall(const int idx, int dir);
 };
 
 #endif

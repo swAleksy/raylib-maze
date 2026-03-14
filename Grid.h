@@ -16,7 +16,7 @@ public:
     int index(int x, int y) const;
     std::pair<int, int> coords(int i) const;
     bool inBounds(int x, int y) const;
-    void Grid::resetCells();
+    void resetCells();
 };
 
 #endif

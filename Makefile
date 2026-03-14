@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -Wall -std=c++17 -D_DEFAULT_SOURCE
 LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
-SRCS = main.cpp Grid.cpp MazeGenerator.cpp
+SRCS = main.cpp Grid.cpp MazeGenerator.cpp MazeSolver.cpp Render.cpp
 
 all: game
 
