@@ -1,16 +1,17 @@
-#include "MazeSolver.h"
-#include "Types.h"
 #include "raylib.h"
 
+#include "MazeSolver.h"
+#include "Types.h"
 #include "Grid.h"
 #include "MazeGenerator.h"
 #include "Render.h"
+
 #include <ctime>
 #include <cstdlib>
 
 #define SCREEN_WIDTH    1000
 #define SCREEN_HEIGHT   1000
-#define CELL_SIZE       25
+#define CELL_SIZE       10
 
 #define MENU_WIDTH      200
 
@@ -40,7 +41,6 @@ int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Maze");
     SetTargetFPS(100);
     bool flag = true;
-
     while (!WindowShouldClose()) {
         if (!generator.finished()) {
             generator.step();
@@ -50,7 +50,8 @@ int main(void) {
                 solver.updateGrid();
                 flag = false;
             }
-            solver.step();
+            for (int i = 0; i < 10; i++)
+                solver.step();
         }
 
         if (IsKeyPressed(KEY_SPACE)) generator.complete();
@@ -62,17 +63,23 @@ int main(void) {
             flag = true;
         }
 
-        if (IsKeyPressed(KEY_T) ) {
-            SolveMode cm = (solver.getCurrentMode() == WALLFOLLOWER) ? DIJKSTRA : WALLFOLLOWER;
-            solver.restart(cm);
+        if (IsKeyPressed(KEY_T)) {
+            SolveMode nextMode;
+            switch (solver.getCurrentMode()) {
+                case WALLFOLLOWER: nextMode = DIJKSTRA;     break;
+                case DIJKSTRA:     nextMode = AS;           break;
+                case AS:           nextMode = WALLFOLLOWER; break;
+                default:           nextMode = WALLFOLLOWER; break;
+            }
+            solver.restart(nextMode);
         }
 
         BeginDrawing();
         if (!generator.finished()) {
-            renderer.RenderGeneratorFrame(grid, generator); // Rysuje oryginał podczas generowania
+            renderer.RenderGeneratorFrame(grid, generator);
         }
         else {
-            renderer.RenderSolverFrame(solver.getGrid(), solver); // <-- ZMIENIONE: Rysuje roboczą kopię z solvera!
+            renderer.RenderSolverFrame(solver.getGrid(), solver);
         }
         EndDrawing();
     }

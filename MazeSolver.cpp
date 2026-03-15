@@ -1,5 +1,6 @@
 #include "MazeSolver.h"
-#include <limits.h>
+#include <climits>
+#include <cmath>
 
 MazeSolver::MazeSolver(const Grid& g, SolveMode m)
     : defaultGrid(g), grid(g), mode(m) {
@@ -7,32 +8,33 @@ MazeSolver::MazeSolver(const Grid& g, SolveMode m)
     }
 
 void MazeSolver::step() {
-    if (finished()) return;
+    if (isFinished()) return;
     if (mode == DIJKSTRA) stepDijkstra();
     else if (mode == AS) stepAS();
     else stepWallfollower();
 }
 
 void MazeSolver::complete() {
-    while (!finished()) step();
+    while (!isFinished()) step();
 }
 
 void MazeSolver::restart(SolveMode newMode){
     mode = newMode;
-    grid = defaultGrid;
+    updateGrid();
     done = false;
-    init();
 }
 
-bool MazeSolver::finished() const {
+bool MazeSolver::isFinished() const {
     return done;
 }
 
-int MazeSolver::getCurrentCell() const { // todo
+int MazeSolver::getCurrentCell() const {
+    if (pq.empty())
+        return -1;
     if (mode == DIJKSTRA)
         return pq.top().second;
     else if (mode == AS)
-        return 1;
+        return pq.top().second;
     else if (mode == WALLFOLLOWER)
         return WfCurrentCell;
     return -1;
@@ -64,34 +66,62 @@ void MazeSolver::init() {
 
     if (mode == WALLFOLLOWER) {
         WfCurrentCell = startIdx;
-        WfFacing = 1;
+        WfFacing = RIGHT;
     }
     else if (mode == DIJKSTRA) {
         distanceMap.assign(grid.data.size(), INT_MAX);
         distanceMap[startIdx] = 0;
+
+        pq = {};
         pq.push({0, startIdx});
-        grid.data[startIdx].visited = true;
+
+        //grid.data[startIdx].visited = true;
     }
     else if (mode == AS) {
+        distanceMap.assign(grid.data.size(), INT_MAX);
+        distanceMap[startIdx] = 0;
 
+        pq = {};
+        int score = getManhattanDist(startIdx);
+        pq.push({score, startIdx});
+
+        //grid.data[startIdx].visited = true;
     }
 }
 
-std::vector<int> MazeSolver::getNeighbors(int x, int y, bool onlyVisited) {
-    std::vector<int> result;
-    for (int i = 0; i < 4; i++) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
-        if (grid.inBounds(nx, ny)) {
-            int nIdx = grid.index(nx, ny);
-            if (!onlyVisited || grid.data[nIdx].visited)
-                result.push_back(nIdx);
+
+void MazeSolver::stepAS() {
+    if (pq.empty()) {
+        done = true;
+        return;
+    }
+    auto [score, currIdx] = pq.top(); // score == cost from start to current idx (distance map) + manhattan distance to finish cell
+    pq.pop();
+    grid.data[currIdx].visited = true;
+
+    if (grid.data[currIdx].finish) {
+        done = true;
+        setFinPath(currIdx);
+        return;
+    }
+
+    auto [x, y] = grid.coords(currIdx);
+    std::vector<int> neighbors = GetNeighborsWithWalls(x, y);
+
+    for (int nIdx : neighbors) {
+        int baseScore = distanceMap[currIdx] + 1; // dist from start
+
+        if (baseScore < distanceMap[nIdx]) {
+            distanceMap[nIdx] = baseScore;
+
+            int score = baseScore + getManhattanDist(nIdx);
+
+            grid.data[nIdx].parentIdx = currIdx;
+
+            grid.data[nIdx].inFrontier = true;
+            pq.push({score, nIdx});
         }
     }
-    return result;
-}
-
-void MazeSolver::stepAS() { // todo
 }
 
 void MazeSolver::stepDijkstra() {
@@ -102,9 +132,11 @@ void MazeSolver::stepDijkstra() {
 
     auto [dist, currIdx] = pq.top();
     pq.pop();
-
+    grid.data[currIdx].visited = true
+    ;
     if (grid.data[currIdx].finish) {
         done = true;
+        setFinPath(currIdx);
         return;
     }
 
@@ -118,9 +150,8 @@ void MazeSolver::stepDijkstra() {
         if (newDist < distanceMap[nIdx]) {
             distanceMap[nIdx] = newDist;
 
-            grid.data[nIdx].parent = &grid.data[currIdx];
+            grid.data[nIdx].parentIdx = currIdx;
 
-            grid.data[nIdx].visited = true;
             grid.data[nIdx].inFrontier = true; // queue visualisation
             pq.push({newDist, nIdx});
         }
@@ -133,30 +164,31 @@ void MazeSolver::stepWallfollower() {
     auto [x, y] = grid.coords(WfCurrentCell);
 
     std::vector<int> directionsToCheck;
+    int facingInt = static_cast<int>(WfFacing);
 
     if (followLeft) { // (facing dir + check dir) % 4
         directionsToCheck = {
-            (WfFacing + 3) % 4, // left
-            WfFacing,           // str
-            (WfFacing + 1) % 4, // right
-            (WfFacing + 2) % 4  // back
+            (facingInt + 3) % 4, // left
+            facingInt,           // str
+            (facingInt + 1) % 4, // right
+            (facingInt + 2) % 4  // back
         };
     }
     else {
         directionsToCheck = {
-            (WfFacing + 1) % 4, // 1. right
-            WfFacing,           // 2. str
-            (WfFacing + 3) % 4, // 3. legt
-            (WfFacing + 2) % 4  // 4. back
+            (facingInt + 1) % 4, // 1. right
+            facingInt,           // 2. str
+            (facingInt + 3) % 4, // 3. legt
+            (facingInt + 2) % 4  // 4. back
         };
     }
     for (int nextDir : directionsToCheck) {
         bool wallExists = true;
 
-        if (nextDir == 0) wallExists = grid.data[WfCurrentCell].walls.top;
-        else if (nextDir == 1) wallExists = grid.data[WfCurrentCell].walls.right;
-        else if (nextDir == 2) wallExists = grid.data[WfCurrentCell].walls.bott;
-        else if (nextDir == 3) wallExists = grid.data[WfCurrentCell].walls.left;
+        if (nextDir == UP) wallExists = grid.data[WfCurrentCell].walls.top;
+        else if (nextDir == RIGHT) wallExists = grid.data[WfCurrentCell].walls.right;
+        else if (nextDir == DOWN) wallExists = grid.data[WfCurrentCell].walls.bott;
+        else if (nextDir == LEFT) wallExists = grid.data[WfCurrentCell].walls.left;
 
         if (!wallExists) {
             int nx = x + dx[nextDir];
@@ -164,7 +196,7 @@ void MazeSolver::stepWallfollower() {
 
             if (grid.inBounds(nx, ny)) {
                 WfCurrentCell = grid.index(nx, ny);
-                WfFacing = nextDir;
+                WfFacing = static_cast<Direction>(nextDir);
                 grid.data[WfCurrentCell].visited = true;
 
                 if (grid.data[WfCurrentCell].finish) {
@@ -205,4 +237,20 @@ bool MazeSolver::hasWall(const int idx, int dir) {
         case 3: return grid.data[idx].walls.left;
     }
     return true;
+}
+
+int MazeSolver::getManhattanDist(int idx) {
+    auto [x1, y1] = grid.coords(idx);
+    auto [x2, y2] = grid.coords(grid.data.size() - 1);
+    return std::abs(x1 - x2) + std::abs(y1 - y2); // manhattan distance
+}
+
+void MazeSolver::setFinPath(int endIdx){
+    int curr = endIdx;
+    int safetyCounter = 0;
+    int maxCells = grid.data.size();
+    while (curr != -1) {
+        grid.data[curr].path = true;
+        curr = grid.data[curr].parentIdx;
+    }
 }

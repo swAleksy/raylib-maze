@@ -1,9 +1,9 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "MazeSolver.h"
 #include "raylib.h"
 #include "Grid.h"
+#include "MazeSolver.h"
 #include "MazeGenerator.h"
 
 class Render {

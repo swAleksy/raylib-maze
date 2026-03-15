@@ -5,9 +5,9 @@
 Render::Render(int cellSize, int menuWidth, int screenWidth, int screenHeight, const Grid& g)
     : cellSize(cellSize),
       menuWidth(menuWidth),
-      screenHeight(screenHeight),
       offsetX(menuWidth + (screenWidth - menuWidth - g.cols * cellSize) / 2),
-      offsetY((screenHeight - g.rows * cellSize) / 2)
+      offsetY((screenHeight - g.rows * cellSize) / 2),
+      screenHeight(screenHeight)
 {}
 
 
@@ -29,20 +29,35 @@ void Render::RenderSolverFrame(const Grid& grid, MazeSolver& solver) {
 
 void Render::DrawUI(MazeMode mode) {
     DrawRectangle(0, 0, menuWidth, screenHeight, colorPanel);
-    DrawText(mode == DFS ? "Mode: DFS" : "Mode: PRIMS", 10, 50, 20, WHITE);
-    DrawText("[R] Reset", 10, 100, 16, GRAY);
-    DrawText("[SPACE] Complete", 10, 130, 16, GRAY);
+
+    DrawText("MAZE GENERATOR", 15, 30, 20, WHITE);
+    DrawLine(15, 60, menuWidth - 15, 60, GRAY);
+
+    DrawText("Current Mode:", 15, 80, 16, LIGHTGRAY);
+    DrawText(mode == DFS ? "DFS" : "Prim's Alg.", 15, 100, 22, SKYBLUE);
+
+    DrawText("Controls:", 15, 150, 16, LIGHTGRAY);
+    DrawText("[R] Change Mode", 15, 180, 16, WHITE);
+    DrawText("[SPACE] Skip Gen", 15, 210, 16, WHITE);
 }
 
 void Render::DrawUI(SolveMode mode) {
     DrawRectangle(0, 0, menuWidth, screenHeight, colorPanel);
-    DrawText("Solving maze:", 10, 20, 10, RED);
-    if (mode == WALLFOLLOWER) DrawText("Mode: WALLFOLLOWER", 10, 50, 20, WHITE);
-    else if (mode == DIJKSTRA) DrawText("Mode: DIJKSTRA", 10, 50, 20, WHITE);
-    else if (mode == AS) DrawText("Mode: A*", 10, 50, 20, WHITE);
 
-    // DrawText("[R] Reset", 10, 100, 16, GRAY);
-    // DrawText("[SPACE] Complete", 10, 130, 16, GRAY);
+    DrawText("MAZE SOLVER", 15, 30, 20, WHITE);
+    DrawLine(15, 60, menuWidth - 15, 60, GRAY);
+
+    const char* modeText = "";
+    if (mode == WALLFOLLOWER) modeText = "Wall Follower";
+    else if (mode == DIJKSTRA) modeText = "Dijkstra";
+    else if (mode == AS) modeText = "A* (A-Star)";
+
+    DrawText("Current Mode:", 15, 80, 16, LIGHTGRAY);
+    DrawText(modeText, 15, 100, 22, GREEN);
+
+    DrawText("Controls:", 15, 150, 16, LIGHTGRAY);
+    DrawText("[T] Change Solver", 15, 180, 16, WHITE);
+    DrawText("[R] Reset Maze", 15, 210, 16, WHITE);
 }
 
 void Render::DrawGrid(const Grid& grid, bool solving) {
@@ -51,11 +66,19 @@ void Render::DrawGrid(const Grid& grid, bool solving) {
         int px = offsetX + x * cellSize;
         int py = offsetY + y * cellSize;
 
-        if (grid.data[i].visited && !solving) {
-            DrawRectangle(px, py, cellSize, cellSize, colorVisited);
+        if (solving) {
+            if (grid.data[i].path) {
+                DrawRectangle(px+cellSize*0.1, py+cellSize*0.1, cellSize-cellSize*0.2, cellSize-cellSize*0.2, DARKGREEN);
+            }
+            else if (grid.data[i].visited) {
+                DrawRectangle(px, py, cellSize, cellSize, colorVisitedSolving);
+            }
+            else if (grid.data[i].inFrontier) {
+                DrawRectangle(px, py, cellSize, cellSize, {90, 40, 60, 255});
+            }
         }
-        else if (grid.data[i].visited && solving){
-            DrawRectangle(px, py, cellSize, cellSize, colorVisitedSolving);
+        else{
+            DrawRectangle(px, py, cellSize, cellSize, colorVisited);
         }
 
         if (grid.data[i].walls.top) DrawLine(px, py, px + cellSize, py, colorWall);
