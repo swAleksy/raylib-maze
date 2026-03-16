@@ -1,16 +1,20 @@
 CXX = g++
-CXXFLAGS = -Wall -std=c++17 -D_DEFAULT_SOURCE
+CXXFLAGS = -Wall -std=c++17 -D_DEFAULT_SOURCE -Isrc
 LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
-SRCS = main.cpp Grid.cpp MazeGenerator.cpp MazeSolver.cpp Render.cpp
+SRC_DIR = src
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+TARGET = game
 
-all: game
+all: $(TARGET)
 
-game: $(SRCS)
-	$(CXX) $(CXXFLAGS) $(SRCS) -o game $(LDFLAGS)
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET) $(LDFLAGS)
 
-run: game
-	./game
+run: $(TARGET)
+	./$(TARGET)
 
 clean:
-	rm -f game
+	rm -f $(TARGET)
+
+.PHONY: all run clean
