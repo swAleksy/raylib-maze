@@ -1,5 +1,7 @@
 # Raylib Maze Generator & Solver
 
+<img width="993" height="978" alt="Image" src="https://github.com/user-attachments/assets/72f42f87-96a0-44bf-858e-9fcf88310ce1" />
+
 A C++ visualizer for maze generation (DFS, Prim's) and solving algorithms (A*, Dijkstra, Wall Follower).
 
 ## Prerequisites
